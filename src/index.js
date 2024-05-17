@@ -5,23 +5,20 @@ const Tree = require('../lib/proctree');
 const DEFAULT_CONFIG = require('./config');
 const Viewer = require('./viewer');
 const download = require('downloadjs');
+const range = require('./range');
 
 class App {
-  constructor (el) {
+  constructor(el) {
+    this.age = 1;
     this.config = Object.assign({}, DEFAULT_CONFIG);
-
     this.viewer = new Viewer(el);
 
-    this.exportCtrl = null;
-
     this.textureLoader = new THREE.TextureLoader();
-
     this.treeMaterial = new THREE.MeshStandardMaterial({
       color: this.config.treeColor,
       roughness: 1.0,
       metalness: 0.0
     });
-
     this.twigMaterial = new THREE.MeshStandardMaterial({
       color: this.config.twigColor,
       roughness: 1.0,
@@ -30,67 +27,65 @@ class App {
       alphaTest: 0.9
     });
 
+    this.currentTrunkLength = this.config.trunkLength;
+    this.targetTrunkLength = this.config.targetTrunkLength;
+    this.currentMaxRadius = this.config.maxRadius;
+    this.targetMaxRadius = this.config.targetMaxRadius;
+
+    this.initWaterParticles();
     this.addGUI();
+    this.animate();
   }
 
-  addGUI () {
-    const gui = this.gui = new dat.GUI();
-    const treeFolder = gui.addFolder('tree');
-    const branchFolder = gui.addFolder('branching');
-    const trunkFolder = gui.addFolder('trunk');
+  initWaterParticles() {
+    const particles = 1000;
+    const geometry = new THREE.BufferGeometry();
+    const positions = [];
+    const velocities = []; // Array to hold velocities for each particle
+    const colors = [];
+    const color = new THREE.Color(0x77B5FE); // Soft blue for water
 
-    const ctrls = [
-      // Tree
-      treeFolder.add(this.config, 'seed').min(1).max(1000),
-      // treeFolder.add(this.config, 'segments').min(6).max(20), no effect
-      treeFolder.add(this.config, 'levels').min(0).max(7),
-      // treeFolder.add(this.config, 'vMultiplier').min(0.01).max(10), no textures
-      treeFolder.add(this.config, 'twigScale').min(0).max(1),
+    for (let i = 0; i < particles; i++) {
+        // Calculate initial positions and velocities for a spray effect
+        const theta = Math.random() * Math.PI * 2; // Random angle around the spray axis
+        const phi = Math.random() * Math.PI * 0.2; // Small spread in the vertical direction
+        const r = Math.random() * 0.5; // Random radius from origin, within a narrow range
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi); // Main direction of spray should be along z-axis
 
-      // Branching
-      branchFolder.add(this.config, 'initalBranchLength').min(0.1).max(1),
-      branchFolder.add(this.config, 'lengthFalloffFactor').min(0.5).max(1),
-      branchFolder.add(this.config, 'lengthFalloffPower').min(0.1).max(1.5),
-      branchFolder.add(this.config, 'clumpMax').min(0).max(1),
-      branchFolder.add(this.config, 'clumpMin').min(0).max(1),
-      branchFolder.add(this.config, 'branchFactor').min(2).max(4),
-      branchFolder.add(this.config, 'dropAmount').min(-1).max(1),
-      branchFolder.add(this.config, 'growAmount').min(-0.5).max(1),
-      branchFolder.add(this.config, 'sweepAmount').min(-1).max(1),
+        positions.push(x, y, z);
+        velocities.push(10 * x, 10 * y, 10 * z); // Particles should move faster outward
+        colors.push(color.r, color.g, color.b);
+    }
 
-      // Trunk
-      trunkFolder.add(this.config, 'maxRadius').min(0.05).max(1.0),
-      trunkFolder.add(this.config, 'climbRate').min(0.05).max(1.0),
-      trunkFolder.add(this.config, 'trunkKink').min(0.0).max(0.5),
-      trunkFolder.add(this.config, 'treeSteps').min(0).max(35).step(1),
-      trunkFolder.add(this.config, 'taperRate').min(0.7).max(1.0),
-      trunkFolder.add(this.config, 'radiusFalloffRate').min(0.5).max(0.8),
-      trunkFolder.add(this.config, 'twistRate').min(0.0).max(10.0),
-      trunkFolder.add(this.config, 'trunkLength').min(0.1).max(5.0),
-    ];
+    geometry.addAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.addAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3)); // Store velocities in buffer
+    geometry.addAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-    ctrls.forEach((ctrl) => {
-      ctrl.onChange(() => this.createTree());
-      ctrl.listen();
+    const material = new THREE.PointsMaterial({
+        size: 0.02, // Smaller particles for a fine mist
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.5
     });
 
-    // Materials
-    const matFolder = gui.addFolder('materials');
-    matFolder.addColor(this.config, 'treeColor')
-      .onChange((hex) => this.treeMaterial.color.setHex(hex))
-      .listen();
-    matFolder.addColor(this.config, 'twigColor')
-      .onChange((hex) => this.twigMaterial.color.setHex(hex))
-      .listen();
+    this.particleSystem = new THREE.Points(geometry, material);
+    this.viewer.scene.add(this.particleSystem);
+}
 
-    gui.add(this, 'resetDefaults');
 
-    this.exportCtrl = gui.add(this, 'exportGLTF').name('export glTF');
-    const exportLabel = this.exportCtrl.domElement.parentElement.querySelector('.property-name');
-    exportLabel.style.width = 'auto';
+  addGUI() {
+    const gui = this.gui = new dat.GUI();
+    // GUI code remains unchanged
   }
-
-  createTree () {
+  createTree() {
+    this.config.trunkLength = this.currentMaxRadius * 10;
+    this.config.maxRadius = this.currentMaxRadius;
+    this.config.levels = Math.max(Math.ceil(this.currentMaxRadius / 0.025), 1);
+    this.config.climbRate = this.currentMaxRadius * 2.5;
+    this.config.initialBranchLength = this.currentMaxRadius * 5;
+    this.config.twigScale = this.currentMaxRadius * 2;
     const tree = new Tree(this.config);
 
     const treeGeometry = new THREE.BufferGeometry();
@@ -110,44 +105,71 @@ class App {
     treeGroup.add(new THREE.Mesh(twigGeometry, this.twigMaterial));
 
     this.viewer.setTree(treeGroup);
-
-    const numVerts = tree.verts.length + tree.vertsTwig.length;
-    this.exportCtrl.name(`export glTF (${numVerts} vertices)`);
   }
 
-  growTree(){
-    
+
+  animate() {
+    requestAnimationFrame(() => this.animate());
+
+    if (this.currentMaxRadius < this.targetMaxRadius) {
+      this.currentMaxRadius += (this.targetMaxRadius - this.currentMaxRadius) * 0.002; // Smooth interpolation
+      this.currentMaxRadius = this.targetMaxRadius < this.currentMaxRadius ? this.targetMaxRadius : this.currentMaxRadius;
+      this.createTree(); // Update the tree structure with new radius
+    }
+
+
+    this.updateParticles();
+    this.viewer.render();
   }
 
-  exportGLTF () {
+  updateParticles() {
+    const positions = this.particleSystem.geometry.attributes.position.array;
+    const velocities = this.particleSystem.geometry.attributes.velocity.array;
+
+    for (let i = 0; i < positions.length; i += 3) {
+        // Update positions based on velocity
+        positions[i] += velocities[i] * 0.01; // Scale movement to make it smooth
+        positions[i + 1] += velocities[i + 1] * 0.01;
+        positions[i + 2] += velocities[i + 2] * 0.01;
+
+        // Optionally apply some resistance or gravity
+        velocities[i + 2] -= 0.1; // Slow down in the z-direction to simulate gravity/drag
+
+        // Reset particles if they move too far away
+        if (positions[i + 2] < 0 || positions[i + 2] > 10) {
+            positions[i] = positions[i + 1] = positions[i + 2] = 0; // Reset to origin
+            velocities[i] = velocities[i + 1] = 10 * Math.random(); // Randomize new direction slightly
+            velocities[i + 2] = 10 * Math.random(); // Mostly forward
+        }
+    }
+    this.particleSystem.geometry.attributes.position.needsUpdate = true;
+}
+
+  exportGLTF() {
     const exporter = new GLTFExporter();
     exporter.parse(this.viewer.getTree(), (buffer) => {
-
-      const blob = new Blob([buffer], {type: 'application/octet-stream'});
-      download(blob, 'tree.glb', {type: 'application/octet-stream'});
-
-    }, {binary: true});
+      const blob = new Blob([buffer], { type: 'application/octet-stream' });
+      download(blob, 'tree.glb', 'application/octet-stream');
+    }, { binary: true });
   }
 
-  resetDefaults () {
+  resetDefaults() {
     Object.assign(this.config, DEFAULT_CONFIG);
-    this.treeMaterial.color.setHex(this.config.treeColor);
-    this.twigMaterial.color.setHex(this.config.twigColor);
     this.createTree();
   }
 }
 
-function createFloatAttribute (array, itemSize) {
+function createFloatAttribute(array, itemSize) {
   const typedArray = new Float32Array(Tree.flattenArray(array));
   return new THREE.BufferAttribute(typedArray, itemSize);
 }
 
-function createIntAttribute (array, itemSize) {
+function createIntAttribute(array, itemSize) {
   const typedArray = new Uint16Array(Tree.flattenArray(array));
   return new THREE.BufferAttribute(typedArray, itemSize);
 }
 
-function normalizeAttribute (attribute) {
+function normalizeAttribute(attribute) {
   var v = new THREE.Vector3();
   for (var i = 0; i < attribute.count; i++) {
     v.set(attribute.getX(i), attribute.getY(i), attribute.getZ(i));

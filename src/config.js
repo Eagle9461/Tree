@@ -1,6 +1,6 @@
 module.exports = {
   // proctree
-  seed: 256,
+  seed: 358,
   segments: 6,
   levels: 0.1,
   vMultiplier: 2.36,
@@ -9,21 +9,31 @@ module.exports = {
   lengthFalloffFactor: 0.85,
   lengthFalloffPower: 0.99,
   clumpMax: 0.9,
-  clumpMin: 0.404,
+  clumpMin: 0,
   branchFactor: 2.45,
   dropAmount: -0.1,
-  growAmount: 0.235,
+  growAmount: 1,
   sweepAmount: 0.01,
-  maxRadius: 0.05,
-  climbRate: 0.05,
   trunkKink: 0.093,
-  treeSteps: 0,
+  treeSteps: 8,
   taperRate: 0.947,
   radiusFalloffRate: 0.5,
   twistRate: 3.02,
+
+  // TrunkLength Configuration
   trunkLength: 0.1,
+  targetTrunkLength: 2.0,
+  trunkLengthSpeed: 0.005,
+
+  
+  maxRadius: 0.05,
+  targetMaxRadius: 0.2,
+  maxRadiusSpeed: 0.0004,
+
+  
+  climbRate: 0.05,
 
   // custom
   treeColor: 0x9d7362,
-  twigColor: 0xF16950
+  twigColor: 0xaef150
 };
