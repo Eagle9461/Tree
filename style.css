@@ -15,10 +15,18 @@ body,
   padding: 0;
 }
 
-.plant-btn {
+.plant{
   position: absolute;
   top: 20px; /* Position from the top of the container */
   left: 20px; /* Position from the right of the container */
+}
+.switch {
+  position: absolute;
+  top: 64px; /* Position from the top of the container */
+  left: 20px; /* Position from the right of the container */
+}
+
+.btn {
   background-color: #4CAF50; /* Green */
   border: none;
   color: white;
@@ -31,6 +39,6 @@ body,
   z-index: 10; /* Ensure it's above all other canvas elements */
 }
 
-.plant-btn i {
+.btn i {
   margin-right: 5px; /* Space between icon and text */
 }
