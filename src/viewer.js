@@ -26,8 +26,7 @@ class Viewer {
     this.renderer.setSize( el.clientWidth, el.clientHeight );
 
     this.controls = new THREE.OrbitControls( this.camera, this.renderer.domElement );
-    this.controls.autoRotate = true;
-    this.controls.autoRotateSpeed = -5;
+    this.controls.autoRotate = false;
     this.controls.enablePan = false;
     this.controls.minDistance = 1;
     this.controls.maxDistance = 90;
@@ -78,6 +77,11 @@ class Viewer {
   setTree (tree) {
     if (this.tree) {
       this.scene.remove(this.tree);
+      this.tree.children.forEach((object) => {
+        object.geometry.dispose();
+        object.material.dispose();
+      });
+      delete this.tree;
     }
     tree.position.y = -3;
     this.scene.add(tree);

@@ -24,6 +24,7 @@
     "downloadjs": "^1.4.7",
     "three": "^0.90.0",
     "three-fbx-loader": "^1.0.3",
+    "three-obj-mtl-loader": "^1.0.3",
     "three-vignette-background": "^1.0.3"
   }
 }

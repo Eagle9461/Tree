@@ -1,11 +1,16 @@
 const THREE = window.THREE = require('three');
 const FBXLoader = require('three-fbx-loader');
+const {OBJLoader, MTLLoader} = require('three-obj-mtl-loader');
 const dat = require('dat.gui');
 const GLTFExporter = require('../lib/GLTFExporter');
 const Tree = require('../lib/proctree');
 const DEFAULT_CONFIG = require('./config');
 const Viewer = require('./viewer');
 const download = require('downloadjs');
+
+let mtlLoader = new MTLLoader();
+ 
+let objLoader = new OBJLoader();
 
 class App {
   constructor(el) {
@@ -38,19 +43,22 @@ class App {
   }
 
   plantSeed() {
-    const seedGeometry = new THREE.SphereGeometry(0.1, 16, 16); // Small sphere to represent the seed
-    const seedMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Dark brown color
-    this.seed = new THREE.Mesh(seedGeometry, seedMaterial);
-
-    // Position the seed above the ground where it will be "planted"
-    this.seed.position.set(0, 3, 0); // Adjust Y to be above the ground
-    this.viewer.scene.add(this.seed);
-
-    this.seedPlanted = false;
-    // const seedStartHeight = 5; // Start height above the ground
-    this.seedEndHeight = -3; // Slightly below the ground surface to simulate "planting"
+    const fbxLoader = new FBXLoader();
+    fbxLoader.load('../assets/seed/acorn.fbx', (object) => {
+      this.seed = object;
+      this.seed.scale.set(0.001, 0.001, 0.001); // Adjust the scale if necessary
+      this.seed.position.set(0, 3, 0);
+      this.viewer.scene.add(this.seed);
+      this.seed.traverse((child) => {
+        if (child.isMesh) {
+          child.material.color.set(0x2f1d12); // Light blue color
+          child.material.needsUpdate = true;
+        }
+      });
+      this.seed.rotation.z = Math.PI / 2;
+    });
   }
-
+  
   initGround() {
     const geometry = new THREE.PlaneGeometry(50, 50); // You can adjust the size as needed
     const material = new THREE.MeshStandardMaterial({
@@ -178,25 +186,33 @@ class App {
     this.config.climbRate = this.currentMaxRadius * 2.5;
     this.config.initalBranchLength = this.currentMaxRadius * 6;
     this.config.twigScale = this.currentMaxRadius * 2.5;
-    const tree = new Tree(this.config);
+    if(this.tree) delete this.tree;
+    this.tree = new Tree(this.config);
 
-    const treeGeometry = new THREE.BufferGeometry();
-    treeGeometry.addAttribute('position', createFloatAttribute(tree.verts, 3));
-    treeGeometry.addAttribute('normal', normalizeAttribute(createFloatAttribute(tree.normals, 3)));
-    treeGeometry.addAttribute('uv', createFloatAttribute(tree.UV, 2));
-    treeGeometry.setIndex(createIntAttribute(tree.faces, 1));
+    if(this.treeGeometry) delete this.treeGeometry;
+    this.treeGeometry = new THREE.BufferGeometry();
+    this.treeGeometry.addAttribute('position', createFloatAttribute(this.tree.verts, 3));
+    this.treeGeometry.addAttribute('normal', normalizeAttribute(createFloatAttribute(this.tree.normals, 3)));
+    this.treeGeometry.addAttribute('uv', createFloatAttribute(this.tree.UV, 2));
+    this.treeGeometry.setIndex(createIntAttribute(this.tree.faces, 1));
 
-    const twigGeometry = new THREE.BufferGeometry();
-    twigGeometry.addAttribute('position', createFloatAttribute(tree.vertsTwig, 3));
-    twigGeometry.addAttribute('normal', normalizeAttribute(createFloatAttribute(tree.normalsTwig, 3)));
-    twigGeometry.addAttribute('uv', createFloatAttribute(tree.uvsTwig, 2));
-    twigGeometry.setIndex(createIntAttribute(tree.facesTwig, 1));
+    if(this.twigGeometry) delete this.twigGeometry;
+    this.twigGeometry = new THREE.BufferGeometry();
+    this.twigGeometry.addAttribute('position', createFloatAttribute(this.tree.vertsTwig, 3));
+    this.twigGeometry.addAttribute('normal', normalizeAttribute(createFloatAttribute(this.tree.normalsTwig, 3)));
+    this.twigGeometry.addAttribute('uv', createFloatAttribute(this.tree.uvsTwig, 2));
+    this.twigGeometry.setIndex(createIntAttribute(this.tree.facesTwig, 1));
 
-    const treeGroup = new THREE.Group();
-    treeGroup.add(new THREE.Mesh(treeGeometry, this.treeMaterial));
-    treeGroup.add(new THREE.Mesh(twigGeometry, this.twigMaterial));
+    if(this.treeGroup) delete this.treeGroup;
+    this.treeGroup = new THREE.Group();
+    if(this.mesh1) delete this.mesh1;
+    if(this.mesh2) delete this.mesh2;
+    this.mesh1 = new THREE.Mesh(this.treeGeometry, this.treeMaterial);
+    this.mesh2 = new THREE.Mesh(this.twigGeometry, this.twigMaterial);
+    this.treeGroup.add(this.mesh1);
+    this.treeGroup.add(this.mesh2);
 
-    this.viewer.setTree(treeGroup);
+    this.viewer.setTree(this.treeGroup);
   }
 
   animate() {
