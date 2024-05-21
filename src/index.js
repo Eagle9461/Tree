@@ -1,6 +1,5 @@
 const THREE = window.THREE = require('three');
 const FBXLoader = require('three-fbx-loader');
-const ObjLoader = require('three-obj-loader');
 const dat = require('dat.gui');
 const GLTFExporter = require('../lib/GLTFExporter');
 const Tree = require('../lib/proctree');
@@ -36,10 +35,7 @@ class App {
     this.addGUI();
     this.initGround();
     this.plantSeed();
-    // this.initWaterParticles();
-    // this.animate();
   }
-
 
   plantSeed() {
     const seedGeometry = new THREE.SphereGeometry(0.1, 16, 16); // Small sphere to represent the seed
@@ -113,47 +109,7 @@ class App {
     this.viewer.scene.add(this.particleSystem);
   }
 
-  initCoinParticles() {
-    const particles = 40;
-    const geometry = new THREE.BufferGeometry();
-    const positions = [];
-    const velocities = []; // Array to hold velocities for each particle
-    const colors = [];
-    const color = new THREE.Color(0xFFD700); // Soft blue for water
-
-    for (let i = 0; i < particles; i++) {
-      // Calculate initial positions and velocities for a spray effect
-      const theta = Math.random() * Math.PI * 0.6; // Random angle around the spray axis
-      const phi = Math.random() * Math.PI * 0.2; // Small spread in the vertical direction
-      const r = Math.random() * 0.5; // Random radius from origin, within a narrow range
-      const x = r * Math.sin(phi) * Math.cos(theta);
-      const y = r * Math.sin(phi) * Math.sin(theta);
-      const z = r * Math.cos(phi); // Main direction of spray should be along z-axis
-
-      positions.push(0, 0, -1.6);
-      velocities.push(0, Math.abs(y / 5), Math.abs(10 * z)); // Particles should move faster outward
-      colors.push(color.r, color.g, color.b);
-    }
-
-    geometry.addAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.addAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3)); // Store velocities in buffer
-    geometry.addAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
-    const material = new THREE.PointsMaterial({
-      size: 0.23, // Smaller particles for a fine mist
-      vertexColors: true,
-      transparent: true,
-      alphaTest: 0.5,
-      opacity: 0.9
-    });
-    material.map = new THREE.TextureLoader().load("../assets/coin.png");
-    // material.alphaTest = 0.5;
-
-    this.particleCoinSystem = new THREE.Points(geometry, material);
-    this.viewer.scene.add(this.particleCoinSystem);
-  }
-
-  loadWaterCanModel() {
+  initWaterCan() {
     const fbxLoader = new FBXLoader();
     fbxLoader.load('../assets/Watering Can.fbx', (object) => {
       this.waterCan = object;
@@ -162,18 +118,16 @@ class App {
       this.viewer.scene.add(this.waterCan);
       this.waterCan.traverse((child) => {
         if (child.isMesh) {
-            child.material.color.set(0xADD8E6); // Light blue color
-            child.material.needsUpdate = true;
+          child.material.color.set(0xADD8E6); // Light blue color
+          child.material.needsUpdate = true;
         }
-    });
+      });
       this.waterCan.rotation.y = Math.PI / 2;
       this.waterCan.rotation.z = Math.PI / 5;
 
       // Optionally, position the particle system at the spout of the water can
-      this.particleSystem.position.set(0, 0, 0); // Adjust based on your water can model
     });
   }
-
 
   addGUI() {
     const gui = this.gui = new dat.GUI();
@@ -245,17 +199,14 @@ class App {
     this.viewer.setTree(treeGroup);
   }
 
-
   animate() {
     requestAnimationFrame(() => this.animate());
-
 
     if (!this.seedPlanted) {
       this.seed.position.y -= 0.02; // Move the seed down each frame
       if (this.seed.position.y <= this.seedEndHeight) {
         this.seed.position.y = this.seedEndHeight;
         this.seedPlanted = true;
-        // Optionally trigger growth animation here
       }
     } else {
       if (this.currentMaxRadius < this.targetMaxRadius) {
@@ -263,11 +214,7 @@ class App {
         this.currentMaxRadius = this.targetMaxRadius < this.currentMaxRadius ? this.targetMaxRadius : this.currentMaxRadius;
         this.createTree(); // Update the tree structure with new radius
       }
-      if (this.isWater) {
-        this.updateParticles(this.particleCoinSystem);
-      } else {
-        this.updateParticles(this.particleSystem);
-      }
+      this.updateParticles(this.particleSystem);
     }
     this.viewer.render();
   }
@@ -335,20 +282,9 @@ function normalizeAttribute(attribute) {
 }
 
 const app = new App(document.querySelector('#container'));
-app.loadWaterCanModel();
+app.initWaterCan();
 document.querySelector('#plantButton').addEventListener('click', function () {
   console.log('Planting seed...');
-  app.isWater = false;
   app.initWaterParticles();
-  app.initCoinParticles();
-  app.particleCoinSystem.material.visible = app.isWater;
-  app.particleSystem.material.visible = !app.isWater;
   app.animate(); // Assume this function triggers the planting animation in Three.js
-});
-document.querySelector('#switchButton').addEventListener('click', function () {
-  app.isWater = !app.isWater;
-  if (!app.isWater) document.querySelector('#switchButton').innerHTML = "Switch To Coin";
-  else document.querySelector('#switchButton').innerHTML = "Switch To Water";
-  app.particleCoinSystem.material.visible = app.isWater;
-  app.particleSystem.material.visible = !app.isWater;
 });
