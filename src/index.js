@@ -56,6 +56,8 @@ class App {
         }
       });
       this.seed.rotation.z = Math.PI / 2;
+      this.seedEndHeight = -3;
+      this.seedPlanted = false;
     });
   }
   
