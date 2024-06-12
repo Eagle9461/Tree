@@ -21,7 +21,7 @@ void main() {
     vColor = color;
     vec3 cpos = position;
 
-    float waveSize = 10.0;
+    float waveSize = 7.0;
     float tipDistance = 0.3;
     float centerDistance = 0.1;
 
@@ -51,24 +51,20 @@ varying vec3 vColor;
 
 void main() {
     float contrast = 1.5;
-    float brightness = 0.1;
+    float brightness = 0.01;
     vec3 texColor = texture2D(textures[0], vUv).rgb * contrast;
     texColor += vec3(brightness, brightness, brightness);
-    texColor = mix(texColor, texture2D(textures[1], cloudUV).rgb, 0.4);
+    texColor = mix(texColor, texture2D(textures[1], cloudUV).rgb, -2.1);
     gl_FragColor.rgb = texColor;
     gl_FragColor.a = 1.0;
 }
 `;
 
-let mtlLoader = new MTLLoader();
- 
-let objLoader = new OBJLoader();
-
 // Parameters
-const PLANE_SIZE = 50;
-const BLADE_COUNT = 300000;
+const PLANE_SIZE = 30;
+const BLADE_COUNT = 100000;
 const BLADE_WIDTH = 0.05;
-const BLADE_HEIGHT = 0.5;
+const BLADE_HEIGHT = 0.2;
 const BLADE_HEIGHT_VARIATION = 0.4;
 
 class App {
@@ -236,7 +232,7 @@ class App {
   }
   
   initGround() {
-    const geometry = new THREE.PlaneGeometry(35, 35); // You can adjust the size as needed
+    const geometry = new THREE.CircleGeometry(15) //PlaneGeometry(35, 35); // You can adjust the size as needed
     const material = new THREE.MeshStandardMaterial({
       color: 0x006600, // A dark green, resembling grass
       roughness: 2,
@@ -326,7 +322,7 @@ class App {
       // Tree
       treeFolder.add(this.config, 'seed').min(1).max(1000),
       // treeFolder.add(this.config, 'segments').min(6).max(20), no effect
-      treeFolder.add(this.config, 'levels').min(0).max(10),
+      treeFolder.add(this.config, 'levels').min(0).max(7),
       // treeFolder.add(this.config, 'vMultiplier').min(0.01).max(10), no textures
       treeFolder.add(this.config, 'twigScale').min(0).max(1),
 
@@ -358,12 +354,12 @@ class App {
     });
   }
   createTree() {
-    this.config.trunkLength = this.currentMaxRadius * 10;
+    this.config.trunkLength = this.currentMaxRadius * 8;
     this.config.maxRadius = this.currentMaxRadius;
-    this.config.levels = Math.max(Math.ceil(this.currentMaxRadius / 0.025), 1);
-    this.config.climbRate = this.currentMaxRadius * 2.5;
-    this.config.initalBranchLength = this.currentMaxRadius * 6;
-    this.config.twigScale = this.currentMaxRadius * 2.5;
+    this.config.levels = Math.min(Math.ceil(this.currentMaxRadius / 0.025), 7);
+    this.config.climbRate = this.currentMaxRadius * 2;
+    this.config.initalBranchLength = this.currentMaxRadius * 3;
+    this.config.twigScale = this.currentMaxRadius * 2;
     if(this.tree) delete this.tree;
     this.tree = new Tree(this.config);
 
@@ -397,7 +393,7 @@ class App {
     requestAnimationFrame(() => this.animate());
 
     if (!this.seedPlanted) {
-      this.seed.position.y -= 0.02; // Move the seed down each frame
+      this.seed.position.y -= 0.07; // Move the seed down each frame
       if (this.seed.position.y <= this.seedEndHeight) {
         this.seed.position.y = this.seedEndHeight;
         this.seedPlanted = true;

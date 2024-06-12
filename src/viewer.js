@@ -21,7 +21,7 @@ class Viewer {
     this.scene.add(this.camera);
 
     this.renderer = new THREE.WebGLRenderer({antialias: true});
-    this.renderer.setClearColor( 0xF2D5DE );
+    this.renderer.setClearColor( 0x87CEEB );
     this.renderer.setPixelRatio( window.devicePixelRatio );
     this.renderer.setSize( el.clientWidth, el.clientHeight );
 
@@ -34,7 +34,7 @@ class Viewer {
     this.background = createVignetteBackground({
       aspect: this.camera.aspect,
       grainScale: IS_IOS ? 0 : 0.001, // mattdesl/three-vignette-background#1
-      colors: ['#E5CAD2', '#765754']
+      colors: ['#BFD8FF', '#87CEFA', '#4682B4'] // Gradient from light sky blue to deep sky blue
     });
     this.scene.add(this.background);
 

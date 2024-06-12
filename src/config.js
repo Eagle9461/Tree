@@ -26,7 +26,7 @@ module.exports = {
   trunkLengthSpeed: 0.005,
 
   maxRadius: 0.05,
-  targetMaxRadius: 0.2,
+  targetMaxRadius: 0.6,
   maxRadiusSpeed: 0.0004,
 
   climbRate: 0.05,
